@@ -13,6 +13,10 @@ El backend FastAPI de este repo es un entorno de iteración para prompts, modelo
 
 Para el detalle completo de diseño, ver [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+![Demo del flujo de enrolación y reconocimiento](./docs/demo.gif)
+
+*Demo del flujo: el store empieza vacío, Faro no reconoce a Rodolfo. Tras enrolarlo con `yo3.jpg`, lo identifica de nuevo en esa misma foto y también en una foto distinta (`yo.jpg`) con similitud 0.61.*
+
 ## Qué hace hoy
 
 - Aloja Llama 3.2 1B Instruct (Q4_K_M, llama.cpp) tras una interfaz `LLMProvider`.
