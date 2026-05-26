@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Llama GGUF weights (~770 MB) — fetched in setup
+models/
+
+# Smoke-test photos — fetched by scripts/fetch_test_data.py
+test_data/
+
+# Runtime person store with enrolled embeddings
+data/
+
+# Env / secrets
+.env
+.env.local
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
