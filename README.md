@@ -86,8 +86,12 @@ curl -L -o models/Llama-3.2-1B-Instruct-Q4_K_M.gguf \
 ```bash
 FARO_PROVIDER=meta-llama-mobile \
 FARO_MODEL_PATH=models/Llama-3.2-1B-Instruct-Q4_K_M.gguf \
+FARO_ADMIN_USERNAME=carer \
+FARO_ADMIN_PASSWORD=alguna-contraseña-larga \
 .venv/bin/uvicorn app.main:app --port 8765
 ```
+
+Si no defines `FARO_ADMIN_USERNAME` y `FARO_ADMIN_PASSWORD`, el servidor levanta pero todas las rutas de cuidador (`/v1/*`) devuelven **503**. El flujo público de `/enroll/{token}` sigue funcionando. Ver la sección [Autenticación](#autenticación) para los detalles.
 
 La primera llamada a `/v1/recognize` o `/v1/persons` dispara la descarga única de los modelos de InsightFace (~325 MB en `~/.insightface/`). Los arranques siguientes son instantáneos.
 
@@ -108,28 +112,62 @@ Todas las opciones son variables de entorno con prefijo `FARO_`:
 | `FARO_QUANTIZATION`                 | `Q4_K_M`                                 | Lo reporta `/v1/models`                |
 | `FARO_N_CTX`                        | `4096`                                   | Ventana de contexto                    |
 | `FARO_PERSONS_DB_PATH`              | `data/persons.json`                      | Dónde viven las personas enroladas     |
+| `FARO_TOKENS_DB_PATH`               | `data/tokens.json`                       | Dónde viven los tokens de enrolación   |
 | `FARO_FACE_SIMILARITY_THRESHOLD`    | `0.5`                                    | Umbral de similitud coseno             |
+| `FARO_ADMIN_USERNAME`               | _(vacío)_                                | Usuario para Basic Auth de cuidador    |
+| `FARO_ADMIN_PASSWORD`               | _(vacío)_                                | Contraseña para Basic Auth de cuidador |
+
+## Autenticación
+
+Las rutas del cuidador (`/v1/*`) están protegidas con **HTTP Basic Auth**. Configura usuario y contraseña antes de levantar el servidor:
+
+```bash
+export FARO_ADMIN_USERNAME=carer
+export FARO_ADMIN_PASSWORD=alguna-contraseña-larga
+```
+
+Si no las defines, las rutas de cuidador devuelven **503 Service Unavailable** (fail-closed). Si las defines pero la petición no las envía, devuelven **401**.
+
+Las rutas **públicas** son las que un familiar invitado va a tocar — siguen abiertas y no requieren credenciales:
+
+- `GET /healthz`
+- `GET /enroll/{token}`
+- `POST /enroll/{token}`
+
+El token de enrolación en la URL es la autorización del flujo público; no se mezcla con la Basic Auth.
+
+**Cuando esto se exponga fuera de localhost, todo el tráfico tiene que ir por HTTPS** — Basic Auth en claro sobre HTTP es trivial de snifear. Letsencrypt + un reverse proxy (Caddy/Nginx) delante de uvicorn lo resuelve.
 
 ## API
 
-| Método | Ruta                    | Función                                                |
-|--------|-------------------------|--------------------------------------------------------|
-| GET    | `/healthz`              | Liveness                                               |
-| GET    | `/v1/models`            | Proveedor activo, id de modelo, cuantización           |
-| POST   | `/v1/chat/completions`  | Completion de chat puntual                             |
-| POST   | `/v1/chat/stream`       | Stream de tokens por SSE                               |
-| POST   | `/v1/persons`           | Enrolar una persona (multipart: `name`, `description`, `image`) |
-| GET    | `/v1/persons`           | Listar personas enroladas                              |
-| DELETE | `/v1/persons/{id}`      | Eliminar una persona                                   |
-| POST   | `/v1/recognize`         | Reconocer un rostro en una imagen (multipart: `image`, `language`) |
-| GET    | `/openapi.json`         | Esquema OpenAPI 3.1 (fuente para codegen del cliente)  |
-| GET    | `/docs`                 | Swagger UI                                             |
+Las rutas marcadas con 🔒 requieren Basic Auth con las credenciales de cuidador.
+
+| Método | Ruta                              | Función                                                | Auth |
+|--------|-----------------------------------|--------------------------------------------------------|------|
+| GET    | `/healthz`                        | Liveness                                               |      |
+| GET    | `/v1/models`                      | Proveedor activo, id de modelo, cuantización           | 🔒   |
+| POST   | `/v1/chat/completions`            | Completion de chat puntual                             | 🔒   |
+| POST   | `/v1/chat/stream`                 | Stream de tokens por SSE                               | 🔒   |
+| POST   | `/v1/persons`                     | Enrolar una persona (multipart)                        | 🔒   |
+| GET    | `/v1/persons`                     | Listar personas. Filtro: `?status=pending|active`      | 🔒   |
+| DELETE | `/v1/persons/{id}`                | Eliminar una persona                                   | 🔒   |
+| POST   | `/v1/persons/{id}/approve`        | Aprobar una persona pendiente (pasa a `active`)        | 🔒   |
+| POST   | `/v1/recognize`                   | Reconocer un rostro                                    | 🔒   |
+| POST   | `/v1/enrollment-tokens`           | Crear un token de enrolación                           | 🔒   |
+| GET    | `/v1/enrollment-tokens`           | Listar tokens activos                                  | 🔒   |
+| DELETE | `/v1/enrollment-tokens/{id}`      | Revocar un token                                       | 🔒   |
+| GET    | `/enroll/{token}`                 | Formulario de auto-enrolación (HTML)                   |      |
+| POST   | `/enroll/{token}`                 | Envío del formulario de auto-enrolación                |      |
+| GET    | `/openapi.json`                   | Esquema OpenAPI 3.1                                    |      |
+| GET    | `/docs`                           | Swagger UI (las peticiones desde la UI siguen requiriendo Basic Auth) |      |
 
 ### Ejemplos
 
+> Los ejemplos siguientes asumen que has definido `FARO_ADMIN_USERNAME` y `FARO_ADMIN_PASSWORD` y los pasas a curl con `-u`. Sustituye `carer:shhh` por tus credenciales.
+
 Completion de chat:
 ```bash
-curl -s -X POST http://127.0.0.1:8765/v1/chat/completions \
+curl -s -u carer:shhh -X POST http://127.0.0.1:8765/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{
     "messages": [
@@ -143,24 +181,39 @@ curl -s -X POST http://127.0.0.1:8765/v1/chat/completions \
 
 Streaming (SSE):
 ```bash
-curl -sN -X POST http://127.0.0.1:8765/v1/chat/stream \
+curl -sN -u carer:shhh -X POST http://127.0.0.1:8765/v1/chat/stream \
   -H 'content-type: application/json' \
   -d '{"messages":[{"role":"user","content":"Enumera tres razones para correr un LLM localmente."}],"max_tokens":120}' \
   | sed -u -n 's/^data: //p' \
   | jq -j '.delta, (if .done then "\n[done: \(.stop_reason)]\n" else "" end)'
 ```
 
-Enrolar una persona:
+Enrolar una persona directamente (lado cuidador):
 ```bash
-curl -s -X POST http://127.0.0.1:8765/v1/persons \
+curl -s -u carer:shhh -X POST http://127.0.0.1:8765/v1/persons \
   -F "name=Rodolfo Campos" \
   -F "description=tu hijo mayor" \
   -F "image=@/ruta/a/foto.jpg"
 ```
 
+Crear un token de enrolación para compartir por WhatsApp:
+```bash
+curl -s -u carer:shhh -X POST http://127.0.0.1:8765/v1/enrollment-tokens \
+  -H 'content-type: application/json' \
+  -d '{"label":"familia campos"}'
+```
+
+El familiar abre la URL `http://127.0.0.1:8765/enroll/<TOKEN>` en su móvil (sin credenciales — la auth es el propio token) y rellena el formulario.
+
+Listar pendientes y aprobar:
+```bash
+curl -s -u carer:shhh "http://127.0.0.1:8765/v1/persons?status=pending" | jq
+curl -s -u carer:shhh -X POST http://127.0.0.1:8765/v1/persons/<ID>/approve
+```
+
 Reconocer un rostro:
 ```bash
-curl -s -X POST http://127.0.0.1:8765/v1/recognize \
+curl -s -u carer:shhh -X POST http://127.0.0.1:8765/v1/recognize \
   -F "language=es" \
   -F "image=@/ruta/a/foto.jpg" | jq
 ```

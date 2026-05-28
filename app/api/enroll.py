@@ -9,16 +9,11 @@ from app.perception.face import FaceEmbedder
 from app.persons.store import Person, PersonStore
 
 
-router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Carer-side: token CRUD (lives under /v1/...)
-# ---------------------------------------------------------------------------
-
-
-class CreateTokenRequest(BaseModel):
-    label: str = ""
+# Two routers: ``admin_router`` is mounted behind admin Basic Auth in
+# main.py, ``public_router`` is open so anyone with a valid enrollment
+# token URL can use the form.
+admin_router = APIRouter()
+public_router = APIRouter()
 
 
 def _token_store(request: Request) -> TokenStore:
@@ -33,28 +28,32 @@ def _embedder(request: Request) -> FaceEmbedder:
     return request.app.state.face_embedder
 
 
-@router.post("/v1/enrollment-tokens", response_model=EnrollmentToken, status_code=201)
+# ---------------------------------------------------------------------------
+# Carer-side: token CRUD (mounted under /v1, requires admin auth)
+# ---------------------------------------------------------------------------
+
+
+class CreateTokenRequest(BaseModel):
+    label: str = ""
+
+
+@admin_router.post("/enrollment-tokens", response_model=EnrollmentToken, status_code=201)
 async def create_token(body: CreateTokenRequest, request: Request) -> EnrollmentToken:
     return _token_store(request).create(label=body.label)
 
 
-@router.get("/v1/enrollment-tokens", response_model=list[EnrollmentToken])
+@admin_router.get("/enrollment-tokens", response_model=list[EnrollmentToken])
 async def list_tokens(request: Request) -> list[EnrollmentToken]:
     return _token_store(request).list()
 
 
-@router.delete("/v1/enrollment-tokens/{token_id}", status_code=204)
+@admin_router.delete("/enrollment-tokens/{token_id}", status_code=204)
 async def revoke_token(token_id: str, request: Request) -> None:
     if not _token_store(request).revoke(token_id):
         raise HTTPException(status_code=404, detail="Token not found")
 
 
-# ---------------------------------------------------------------------------
-# Carer-side: approve a pending person
-# ---------------------------------------------------------------------------
-
-
-@router.post("/v1/persons/{person_id}/approve", response_model=Person)
+@admin_router.post("/persons/{person_id}/approve", response_model=Person)
 async def approve_person(person_id: str, request: Request) -> Person:
     updated = _person_store(request).set_status(person_id, "active")
     if updated is None:
@@ -63,7 +62,7 @@ async def approve_person(person_id: str, request: Request) -> Person:
 
 
 # ---------------------------------------------------------------------------
-# Public self-enrollment via tokenized URL
+# Public self-enrollment via tokenized URL (no admin auth)
 # ---------------------------------------------------------------------------
 
 
@@ -132,14 +131,14 @@ def _form_body(token: str, error: str | None = None) -> str:
 """
 
 
-@router.get("/enroll/{token}", response_class=HTMLResponse)
+@public_router.get("/enroll/{token}", response_class=HTMLResponse)
 async def enrollment_form(token: str, request: Request) -> HTMLResponse:
     if not _token_store(request).is_valid(token):
         return _page("<h1>Enlace inválido</h1><p>El enlace ha expirado o ya no es válido.</p>", title="Faro")
     return _page(_form_body(token))
 
 
-@router.post("/enroll/{token}", response_class=HTMLResponse)
+@public_router.post("/enroll/{token}", response_class=HTMLResponse)
 async def enrollment_submit(
     token: str,
     request: Request,

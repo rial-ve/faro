@@ -123,20 +123,42 @@ Matching is L2-normalized cosine similarity with a configurable threshold (defau
 
 ## 6. Backend API surface
 
-Minimal. Only what we need to iterate the prompts and the perception pipeline.
+Minimal. Only what we need to iterate the prompts and the perception pipeline. Routes split into two trust tiers:
 
-| Method | Path                    | Purpose                                                |
-|--------|-------------------------|--------------------------------------------------------|
-| GET    | `/healthz`              | Liveness                                               |
-| GET    | `/v1/models`            | Active provider, model id, quantization                |
-| POST   | `/v1/chat/completions`  | One-shot chat completion                               |
-| POST   | `/v1/chat/stream`       | SSE token stream                                       |
-| POST   | `/v1/persons`           | Enrol a person (multipart: name, description, image)   |
-| GET    | `/v1/persons`           | List enrolled people                                   |
-| DELETE | `/v1/persons/{id}`      | Remove a person                                        |
-| POST   | `/v1/recognize`         | Image → match + LLM-phrased spoken response            |
+**Carer-side** (gated by HTTP Basic Auth via the `admin_required` dependency in `app/security.py`):
+
+| Method | Path                              | Purpose                                              |
+|--------|-----------------------------------|------------------------------------------------------|
+| GET    | `/v1/models`                      | Active provider, model id, quantization              |
+| POST   | `/v1/chat/completions`            | One-shot chat completion                             |
+| POST   | `/v1/chat/stream`                 | SSE token stream                                     |
+| POST   | `/v1/persons`                     | Direct enrolment by the carer                        |
+| GET    | `/v1/persons`                     | List enrolled people (filterable by `status`)        |
+| DELETE | `/v1/persons/{id}`                | Remove or reject a person                            |
+| POST   | `/v1/persons/{id}/approve`        | Promote a pending person to `active`                 |
+| POST   | `/v1/recognize`                   | Image → match + LLM-phrased spoken response          |
+| POST   | `/v1/enrollment-tokens`           | Create a shareable enrolment token                   |
+| GET    | `/v1/enrollment-tokens`           | List active tokens                                   |
+| DELETE | `/v1/enrollment-tokens/{id}`      | Revoke a token                                       |
+
+**Public** (intentionally open — these are what an invited family member touches via a WhatsApp link):
+
+| Method | Path                    | Purpose                                                          |
+|--------|-------------------------|------------------------------------------------------------------|
+| GET    | `/healthz`              | Liveness                                                         |
+| GET    | `/enroll/{token}`       | Self-enrolment HTML form. Token validates the request.           |
+| POST   | `/enroll/{token}`       | Submit photo + name + description. Photo bytes never persisted.  |
+
+The token in the URL is the authorisation for the public flow; it does not interact with Basic Auth. The two mechanisms are intentionally separate so the public form stays single-click from WhatsApp.
 
 OpenAPI 3.1 is the source of truth. The mobile client will codegen request/response types from `/openapi.json` so the on-device frontend and the harness stay in lockstep on shapes.
+
+### Security model
+
+- Admin credentials come from `FARO_ADMIN_USERNAME` and `FARO_ADMIN_PASSWORD`. If either is empty, all carer routes return **503 Service Unavailable** (fail-closed) — we never silently fall through to "no auth".
+- Credentials are compared with `secrets.compare_digest` to avoid timing side channels.
+- One shared admin secret per deployment. No per-user identity yet. The day this needs to support multiple carers (e.g. a clinic), the single `admin_required` dependency is the only swap-out point — replace with OIDC and the rest of the architecture is unaffected.
+- This is enough security for a localhost / private-network deployment. Any public exposure **must** terminate TLS in front of uvicorn (Caddy / Nginx + Let's Encrypt). Basic Auth over plain HTTP is trivially sniffable.
 
 ## 7. Stack
 

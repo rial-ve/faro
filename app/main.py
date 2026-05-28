@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 
 from app.api.chat import router as chat_router
-from app.api.enroll import router as enroll_router
+from app.api.enroll import admin_router as enroll_admin_router
+from app.api.enroll import public_router as enroll_public_router
 from app.api.persons import router as persons_router
 from app.api.recognize import router as recognize_router
 from app.enrollment.tokens import TokenStore
@@ -14,6 +15,7 @@ from app.persons.store import PersonStore
 from app.providers.base import LLMProvider
 from app.providers.meta_llama_mobile import MetaLlamaMobileProvider
 from app.providers.mock import MockProvider
+from app.security import admin_required
 from app.settings import Settings, load
 
 
@@ -40,11 +42,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Faro Playground", lifespan=lifespan)
-app.include_router(chat_router, prefix="/v1")
-app.include_router(persons_router, prefix="/v1")
-app.include_router(recognize_router, prefix="/v1")
-# enroll_router defines its own absolute paths (/v1/... and /enroll/...)
-app.include_router(enroll_router)
+
+# Carer-side routers — all gated by HTTP Basic Auth.
+_admin_deps = [Depends(admin_required)]
+app.include_router(chat_router, prefix="/v1", dependencies=_admin_deps)
+app.include_router(persons_router, prefix="/v1", dependencies=_admin_deps)
+app.include_router(recognize_router, prefix="/v1", dependencies=_admin_deps)
+app.include_router(enroll_admin_router, prefix="/v1", dependencies=_admin_deps)
+
+# Public router — anyone with a valid enrollment token URL can use it.
+app.include_router(enroll_public_router)
 
 
 @app.get("/healthz")
@@ -52,7 +59,7 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/v1/models")
+@app.get("/v1/models", dependencies=_admin_deps)
 async def models(request: Request) -> dict[str, str]:
     p: LLMProvider = request.app.state.provider
     return {

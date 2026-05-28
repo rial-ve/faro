@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     tokens_db_path: str = "data/tokens.json"
     face_similarity_threshold: float = 0.5
 
+    # Basic Auth credentials for the carer-side API.
+    # Must both be set; if either is empty, admin routes return 503.
+    admin_username: str = ""
+    admin_password: str = ""
+
 
 def load() -> Settings:
     return Settings()
