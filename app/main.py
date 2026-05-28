@@ -5,8 +5,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 
 from app.api.chat import router as chat_router
+from app.api.enroll import router as enroll_router
 from app.api.persons import router as persons_router
 from app.api.recognize import router as recognize_router
+from app.enrollment.tokens import TokenStore
 from app.perception.face import InsightFaceEmbedder
 from app.persons.store import PersonStore
 from app.providers.base import LLMProvider
@@ -33,6 +35,7 @@ async def lifespan(app: FastAPI):
     app.state.provider = build_provider(settings)
     app.state.face_embedder = InsightFaceEmbedder()
     app.state.person_store = PersonStore(settings.persons_db_path)
+    app.state.token_store = TokenStore(settings.tokens_db_path)
     yield
 
 
@@ -40,6 +43,8 @@ app = FastAPI(title="Faro Playground", lifespan=lifespan)
 app.include_router(chat_router, prefix="/v1")
 app.include_router(persons_router, prefix="/v1")
 app.include_router(recognize_router, prefix="/v1")
+# enroll_router defines its own absolute paths (/v1/... and /enroll/...)
+app.include_router(enroll_router)
 
 
 @app.get("/healthz")

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     n_ctx: int = 4096
 
     persons_db_path: str = "data/persons.json"
+    tokens_db_path: str = "data/tokens.json"
     face_similarity_threshold: float = 0.5
 
 

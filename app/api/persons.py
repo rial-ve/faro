@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from typing import Literal
+
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 
 from app.perception.face import FaceEmbedder
-from app.persons.store import Person, PersonStore
+from app.persons.store import Person, PersonStatus, PersonStore
 
 
 router = APIRouter()
@@ -18,8 +20,11 @@ def _embedder(request: Request) -> FaceEmbedder:
 
 
 @router.get("/persons", response_model=list[Person])
-async def list_persons(request: Request) -> list[Person]:
-    return _store(request).list()
+async def list_persons(
+    request: Request,
+    status: PersonStatus | None = Query(None),
+) -> list[Person]:
+    return _store(request).list(status=status)
 
 
 @router.post("/persons", response_model=Person, status_code=201)
