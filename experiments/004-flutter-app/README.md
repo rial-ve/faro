@@ -32,4 +32,5 @@ _Se irá rellenando a medida que el experimento avance._
 | 004.4 | Flutter scaffold en `app-flutter/`, credenciales en secure storage, probe `/healthz` + `/v1/models` | `b2aa76c` |
 | 004.5 | Captura con `image_picker` (cámara y galería), preview y Info.plist iOS | `f78fb02` |
 | 004.6 | Detección de rostro con `google_mlkit_face_detection` + overlay del bounding box | `bf1c8d7` |
-| 004.7 | Embedding on-device con `tflite_flutter` (mobilefacenet.tflite, cos(onnx,tflite)=1.000000 vs servidor) | _este commit_ |
+| 004.7 | Embedding on-device con `tflite_flutter` (mobilefacenet.tflite, cos(onnx,tflite)=1.000000 vs servidor) | `4aec7f7` |
+| 004.8 | POST embedding al endpoint nuevo + render del match + timings de embed/match en pantalla | _este commit_ |
