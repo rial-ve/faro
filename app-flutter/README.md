@@ -31,12 +31,22 @@ assets/
 └── models/                    # mobilefacenet.tflite (bundleado en 004.7)
 ```
 
+## Modelo de embedding
+
+`assets/models/mobilefacenet.tflite` (13 MB) sale de convertir el mismo `w600k_mbf.onnx` que corre en el servidor. La conversión y el sanity check se reproducen con:
+
+```
+.venv/bin/python scripts/convert_mobilefacenet_to_tflite.py
+```
+
+El script falla si el coseno entre ONNX y TFLite cae por debajo de 0.999.
+
 ## Estado por punto
 
 - ✅ **004.4** — scaffolding + credenciales + probe del backend
-- ⬜ **004.5** — cámara + preview
-- ⬜ **004.6** — detección de rostro con ML Kit
-- ⬜ **004.7** — embedding on-device con tflite_flutter
+- ✅ **004.5** — cámara + preview
+- ✅ **004.6** — detección de rostro con ML Kit
+- ✅ **004.7** — embedding on-device con tflite_flutter
 - ⬜ **004.8** — POST al endpoint `/v1/recognize-embedding`
 - ⬜ **004.9** — voz con flutter_tts
 - ⬜ **004.10** — smoke E2E

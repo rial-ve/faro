@@ -7,8 +7,12 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# Llama GGUF weights (~770 MB) — fetched in setup
-models/
+# Llama GGUF weights (~770 MB) — fetched in setup. Rooted so we don't
+# accidentally exclude app-flutter/assets/models/mobilefacenet.tflite.
+/models/
+
+# ONNX → TFLite conversion artifacts (see scripts/convert_mobilefacenet_to_tflite.py)
+/build/
 
 # Smoke-test photos — fetched by scripts/fetch_test_data.py
 test_data/

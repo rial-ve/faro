@@ -31,4 +31,5 @@ _Se irá rellenando a medida que el experimento avance._
 | 004.2 | Endpoint `POST /v1/recognize-embedding` + 6 tests con `MockEmbedder` pattern | `813c6d3` |
 | 004.4 | Flutter scaffold en `app-flutter/`, credenciales en secure storage, probe `/healthz` + `/v1/models` | `b2aa76c` |
 | 004.5 | Captura con `image_picker` (cámara y galería), preview y Info.plist iOS | `f78fb02` |
-| 004.6 | Detección de rostro con `google_mlkit_face_detection` + overlay del bounding box | _este commit_ |
+| 004.6 | Detección de rostro con `google_mlkit_face_detection` + overlay del bounding box | `bf1c8d7` |
+| 004.7 | Embedding on-device con `tflite_flutter` (mobilefacenet.tflite, cos(onnx,tflite)=1.000000 vs servidor) | _este commit_ |

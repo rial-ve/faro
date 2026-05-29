@@ -1,8 +1,12 @@
+import 'dart:math' as math;
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../capture/capture_picker.dart';
 import '../capture/captured_image.dart';
+import '../face/embedder.dart';
 import '../face/face_detector.dart';
 import '../face/face_overlay.dart';
 
@@ -22,11 +26,15 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _picker = CapturePicker();
   final _faces = FaceDetectorRunner();
+  final _embedder = FaceEmbedder();
 
   CapturedImage? _image;
   DetectedFace? _face;
-  bool _detecting = false;
+  Float32List? _embedding;
+  Duration? _embedTime;
+  bool _processing = false;
   String? _backendStatus;
+  String? _stageError;
   bool _busy = false;
 
   @override
@@ -38,6 +46,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _faces.close();
+    _embedder.close();
     super.dispose();
   }
 
@@ -59,20 +68,38 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _image = img;
         _face = null;
-        _detecting = true;
+        _embedding = null;
+        _embedTime = null;
+        _stageError = null;
+        _processing = true;
       });
+
       final face = await _faces.detectLargest(img);
       if (!mounted) return;
+      if (face == null) {
+        setState(() {
+          _face = null;
+          _processing = false;
+        });
+        return;
+      }
+      setState(() => _face = face);
+
+      final sw = Stopwatch()..start();
+      final embedding = await _embedder.embed(img, face);
+      sw.stop();
+      if (!mounted) return;
       setState(() {
-        _face = face;
-        _detecting = false;
+        _embedding = embedding;
+        _embedTime = sw.elapsed;
+        _processing = false;
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-      setState(() => _detecting = false);
+      setState(() {
+        _processing = false;
+        _stageError = '$e';
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -80,10 +107,23 @@ class _HomePageState extends State<HomePage> {
 
   String _statusLine() {
     if (_image == null) return 'Toma una foto o elige una de la galería para empezar.';
-    if (_detecting) return 'Detectando rostro…';
+    if (_stageError != null) return 'Error: $_stageError';
+    if (_processing) {
+      if (_face == null) return 'Detectando rostro…';
+      return 'Calculando embedding on-device…';
+    }
     if (_face == null) return 'No se detectó ningún rostro.';
-    return 'Rostro detectado: '
-        '${_face!.boundingBox.width.toInt()} × ${_face!.boundingBox.height.toInt()} px';
+    if (_embedding == null) return 'Rostro detectado, embedding pendiente.';
+    final ms = _embedTime!.inMilliseconds;
+    return 'Embedding 512-d • L2 ${_norm(_embedding!).toStringAsFixed(3)} • $ms ms';
+  }
+
+  double _norm(Float32List v) {
+    var s = 0.0;
+    for (final x in v) {
+      s += x * x;
+    }
+    return s == 0 ? 0 : math.sqrt(s);
   }
 
   @override
@@ -153,3 +193,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
