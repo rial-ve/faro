@@ -1,8 +1,9 @@
 # Experimento 004 — App Flutter con face embedding on-device
 
-**Estado:** 🟡 En curso
-**Periodo:** 2026-05-29 → en curso
+**Estado:** ✅ Validado con matices
+**Periodo:** 2026-05-29
 **Depende de:** experimento 003 (MobileFaceNet en el servidor)
+**Desbloquea:** experimento 005 (alineación 5-puntos on-device)
 
 ## Resumen
 
@@ -35,4 +36,5 @@ _Se irá rellenando a medida que el experimento avance._
 | 004.7 | Embedding on-device con `tflite_flutter` (mobilefacenet.tflite, cos(onnx,tflite)=1.000000 vs servidor) | `4aec7f7` |
 | 004.8 | POST embedding al endpoint nuevo + render del match + timings de embed/match en pantalla | `2bd04ef` |
 | 004.9 | `flutter_tts` en es-ES, espera a que termine antes de habilitar siguiente captura | `aff00bf` |
-| 004.10| Smoke offline + SMOKE.md con procedimiento en teléfono. Hallazgo de alineación expuesto (matriz 4 filas) | _este commit_ |
+| 004.10| Smoke offline + SMOKE.md con procedimiento en teléfono. Hallazgo de alineación expuesto (matriz 4 filas) | `d1aeb46` |
+| 004.11| Learning Card cerrada con la fila 3 del smoke como ancla del próximo experimento | _esta carta_ |
