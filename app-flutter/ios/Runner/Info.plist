@@ -4,6 +4,12 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Faro usa la cámara para reconocer rostros conocidos. La foto se procesa en el dispositivo y no se envía a ningún servidor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Faro puede leer una foto de la galería para reconocer rostros conocidos. El procesamiento ocurre en el dispositivo.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>No se usa el micrófono; este permiso lo solicita el sistema de cámara aunque Faro sólo capture imágenes fijas.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
