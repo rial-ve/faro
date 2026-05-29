@@ -33,4 +33,5 @@ _Se irá rellenando a medida que el experimento avance._
 | 004.5 | Captura con `image_picker` (cámara y galería), preview y Info.plist iOS | `f78fb02` |
 | 004.6 | Detección de rostro con `google_mlkit_face_detection` + overlay del bounding box | `bf1c8d7` |
 | 004.7 | Embedding on-device con `tflite_flutter` (mobilefacenet.tflite, cos(onnx,tflite)=1.000000 vs servidor) | `4aec7f7` |
-| 004.8 | POST embedding al endpoint nuevo + render del match + timings de embed/match en pantalla | _este commit_ |
+| 004.8 | POST embedding al endpoint nuevo + render del match + timings de embed/match en pantalla | `2bd04ef` |
+| 004.9 | `flutter_tts` en es-ES, espera a que termine antes de habilitar siguiente captura | _este commit_ |

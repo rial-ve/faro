@@ -10,6 +10,7 @@ import '../capture/captured_image.dart';
 import '../face/embedder.dart';
 import '../face/face_detector.dart';
 import '../face/face_overlay.dart';
+import '../tts/speaker.dart';
 
 class HomePage extends StatefulWidget {
   final ApiClient client;
@@ -24,12 +25,13 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-enum _Stage { idle, detecting, embedding, matching, done, noFace, error }
+enum _Stage { idle, detecting, embedding, matching, speaking, done, noFace, error }
 
 class _HomePageState extends State<HomePage> {
   final _picker = CapturePicker();
   final _faces = FaceDetectorRunner();
   final _embedder = FaceEmbedder();
+  final _speaker = Speaker();
 
   CapturedImage? _image;
   DetectedFace? _face;
@@ -52,6 +54,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _faces.close();
     _embedder.close();
+    _speaker.close();
     super.dispose();
   }
 
@@ -109,8 +112,12 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _result = response;
         _matchTime = msw.elapsed;
-        _stage = _Stage.done;
+        _stage = _Stage.speaking;
       });
+
+      await _speaker.speak(response.spoken);
+      if (!mounted) return;
+      setState(() => _stage = _Stage.done);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -182,6 +189,8 @@ class _HomePageState extends State<HomePage> {
         return 'Calculando embedding on-device…';
       case _Stage.matching:
         return 'Consultando al servidor…';
+      case _Stage.speaking:
+        return 'Hablando…';
       case _Stage.noFace:
         return 'No se detectó ningún rostro.';
       case _Stage.done:
