@@ -31,3 +31,4 @@ experiments/001-mvp-backend/
 | 001 | mvp-backend         | ✅ Validado con matices | El asistente de memoria local-first es técnicamente viable hoy       |
 | 002 | self-enrollment     | ✅ Validado             | El familiar puede auto-enrolarse vía link sin comprometer privacidad |
 | 003 | mobilefacenet-swap  | ✅ Validado             | MobileFaceNet preserva calidad y nos abre la puerta a on-device      |
+| 004 | flutter-app         | 🟡 En curso             | App Flutter con face embedding on-device cierra el flujo en el teléfono |
