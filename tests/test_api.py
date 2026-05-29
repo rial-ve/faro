@@ -96,19 +96,19 @@ async def test_admin_route_returns_503_when_credentials_not_configured():
 # ---------------------------------------------------------------------------
 
 
-def test_build_face_embedder_default_is_buffalo_l():
-    from app.main import build_face_embedder
-    from app.perception.face import InsightFaceEmbedder
-
-    embedder = build_face_embedder(Settings())
-    assert isinstance(embedder, InsightFaceEmbedder)
-    assert embedder.name == "insightface-buffalo_l"
-
-
-def test_build_face_embedder_mobilefacenet_when_selected():
+def test_build_face_embedder_default_is_mobilefacenet():
     from app.main import build_face_embedder
     from app.perception.face import MobileFaceNetEmbedder
 
-    embedder = build_face_embedder(Settings(face_embedder="mobilefacenet"))
+    embedder = build_face_embedder(Settings())
     assert isinstance(embedder, MobileFaceNetEmbedder)
     assert embedder.name == "mobilefacenet"
+
+
+def test_build_face_embedder_buffalo_l_when_selected():
+    from app.main import build_face_embedder
+    from app.perception.face import InsightFaceEmbedder
+
+    embedder = build_face_embedder(Settings(face_embedder="insightface-buffalo_l"))
+    assert isinstance(embedder, InsightFaceEmbedder)
+    assert embedder.name == "insightface-buffalo_l"

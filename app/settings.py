@@ -21,10 +21,11 @@ class Settings(BaseSettings):
     face_similarity_threshold: float = 0.5
 
     # Which face embedder runs server-side. Both are insightface packs;
-    # the smaller `mobilefacenet` (buffalo_s) is the on-device target.
-    # During experiment 003 we A/B between the two; the default flips to
-    # `mobilefacenet` only when the comparison passes the success criteria.
-    face_embedder: Literal["insightface-buffalo_l", "mobilefacenet"] = "insightface-buffalo_l"
+    # `mobilefacenet` (buffalo_s) is the default because it is the only
+    # one that will actually deploy on-device — keeping dev and prod on
+    # the same model avoids surprises. `insightface-buffalo_l` stays
+    # available so experiment 003 can A/B them side by side.
+    face_embedder: Literal["insightface-buffalo_l", "mobilefacenet"] = "mobilefacenet"
 
     # Basic Auth credentials for the carer-side API.
     # Must both be set; if either is empty, admin routes return 503.
