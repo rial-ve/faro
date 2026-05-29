@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../capture/capture_picker.dart';
 import '../capture/captured_image.dart';
+import '../face/face_detector.dart';
+import '../face/face_overlay.dart';
 
 class HomePage extends StatefulWidget {
   final ApiClient client;
@@ -19,7 +21,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _picker = CapturePicker();
+  final _faces = FaceDetectorRunner();
+
   CapturedImage? _image;
+  DetectedFace? _face;
+  bool _detecting = false;
   String? _backendStatus;
   bool _busy = false;
 
@@ -27,6 +33,12 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _probeBackend();
+  }
+
+  @override
+  void dispose() {
+    _faces.close();
+    super.dispose();
   }
 
   Future<void> _probeBackend() async {
@@ -44,15 +56,34 @@ class _HomePageState extends State<HomePage> {
     try {
       final img = await source();
       if (img == null) return;
-      setState(() => _image = img);
+      setState(() {
+        _image = img;
+        _face = null;
+        _detecting = true;
+      });
+      final face = await _faces.detectLargest(img);
+      if (!mounted) return;
+      setState(() {
+        _face = face;
+        _detecting = false;
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo capturar: $e')),
+        SnackBar(content: Text('Error: $e')),
       );
+      setState(() => _detecting = false);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  String _statusLine() {
+    if (_image == null) return 'Toma una foto o elige una de la galería para empezar.';
+    if (_detecting) return 'Detectando rostro…';
+    if (_face == null) return 'No se detectó ningún rostro.';
+    return 'Rostro detectado: '
+        '${_face!.boundingBox.width.toInt()} × ${_face!.boundingBox.height.toInt()} px';
   }
 
   @override
@@ -87,22 +118,16 @@ class _HomePageState extends State<HomePage> {
                         'Toma una foto o elige una de la galería para empezar.',
                         textAlign: TextAlign.center,
                       )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 360),
-                            child: Image.memory(_image!.bytes),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${_image!.width} × ${_image!.height}',
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                    : FaceOverlay(image: _image!, face: _face),
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              _statusLine(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(

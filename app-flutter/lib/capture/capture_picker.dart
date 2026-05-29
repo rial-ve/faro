@@ -17,6 +17,6 @@ class CapturePicker {
     );
     if (picked == null) return null;
     final bytes = await picked.readAsBytes();
-    return CapturedImage.fromBytes(bytes);
+    return CapturedImage.fromPickedFile(picked.path, bytes);
   }
 }
