@@ -34,4 +34,5 @@ _Se irá rellenando a medida que el experimento avance._
 | 004.6 | Detección de rostro con `google_mlkit_face_detection` + overlay del bounding box | `bf1c8d7` |
 | 004.7 | Embedding on-device con `tflite_flutter` (mobilefacenet.tflite, cos(onnx,tflite)=1.000000 vs servidor) | `4aec7f7` |
 | 004.8 | POST embedding al endpoint nuevo + render del match + timings de embed/match en pantalla | `2bd04ef` |
-| 004.9 | `flutter_tts` en es-ES, espera a que termine antes de habilitar siguiente captura | _este commit_ |
+| 004.9 | `flutter_tts` en es-ES, espera a que termine antes de habilitar siguiente captura | `aff00bf` |
+| 004.10| Smoke offline + SMOKE.md con procedimiento en teléfono. Hallazgo de alineación expuesto (matriz 4 filas) | _este commit_ |

@@ -49,4 +49,4 @@ El script falla si el coseno entre ONNX y TFLite cae por debajo de 0.999.
 - ✅ **004.7** — embedding on-device con tflite_flutter
 - ✅ **004.8** — POST al endpoint `/v1/recognize-embedding`
 - ✅ **004.9** — voz con flutter_tts
-- ⬜ **004.10** — smoke E2E
+- 🟡 **004.10** — smoke E2E (offline OK; teléfono pendiente del usuario)
