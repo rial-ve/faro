@@ -7,7 +7,7 @@ Dos decisiones de diseño que vienen directamente de la audiencia:
 - **Local primero.** Todo corre en el teléfono del usuario, nunca en la nube. Las fotos familiares, los nombres y las relaciones — datos sensibles para cualquiera, y aún más para alguien cuya capacidad de consentir al uso de sus datos puede estar comprometida — nunca salen del dispositivo.
 - **Sin conexión.** El modelo funciona sin Internet, así que no falla en un hospital, en un pueblo remoto o en un sótano. La misma restricción hace que la latencia se sienta instantánea.
 
-Los familiares o cuidadores enrolan a los seres queridos una sola vez con una foto, un nombre y una descripción corta; a partir de ese momento, basta con que la cámara apunte a esa persona para que Faro responda. Por dentro: Llama 3.2 1B Instruct (Q4) formula la frase, los embeddings de ArcFace reconocen el rostro, ambos pensados para correr vía ExecuTorch y ONNX Runtime Mobile en el teléfono.
+Los familiares o cuidadores enrolan a los seres queridos una sola vez con una foto, un nombre y una descripción corta; a partir de ese momento, basta con que la cámara apunte a esa persona para que Faro responda. Por dentro: Llama 3.2 1B Instruct (Q4) formula la frase, los embeddings de MobileFaceNet (familia ArcFace) reconocen el rostro, ambos pensados para correr vía ExecuTorch y ONNX Runtime Mobile en el teléfono.
 
 El backend FastAPI de este repo es un entorno de iteración para prompts, modelos y las abstracciones de proveedor — no es el producto.
 
@@ -43,7 +43,7 @@ faro/
 │   │   ├── meta_llama_mobile.py      # llama-cpp-python, defaults Q4
 │   │   └── mock.py
 │   ├── perception/
-│   │   └── face.py                   # Protocolo FaceEmbedder + InsightFaceEmbedder
+│   │   └── face.py                   # Protocolo FaceEmbedder + InsightFaceEmbedder + MobileFaceNetEmbedder
 │   ├── persons/
 │   │   └── store.py                  # Store de personas en JSON + similitud coseno
 │   └── prompts/llama3_template.py    # Fuente única de la plantilla de chat
@@ -60,7 +60,7 @@ faro/
 
 - Python 3.11+
 - Un fichero GGUF de Llama 3.2 1B Instruct (usamos Q4_K_M, ~770 MB)
-- ~325 MB en disco para los modelos ONNX `buffalo_l` de InsightFace (se descargan automáticamente la primera vez)
+- ~15 MB en disco para los modelos ONNX `buffalo_s` de InsightFace (MobileFaceNet + detector, se descargan automáticamente la primera vez)
 
 ## Instalación
 
@@ -93,7 +93,7 @@ FARO_ADMIN_PASSWORD=alguna-contraseña-larga \
 
 Si no defines `FARO_ADMIN_USERNAME` y `FARO_ADMIN_PASSWORD`, el servidor levanta pero todas las rutas de cuidador (`/v1/*`) devuelven **503**. El flujo público de `/enroll/{token}` sigue funcionando. Ver la sección [Autenticación](#autenticación) para los detalles.
 
-La primera llamada a `/v1/recognize` o `/v1/persons` dispara la descarga única de los modelos de InsightFace (~325 MB en `~/.insightface/`). Los arranques siguientes son instantáneos.
+La primera llamada a `/v1/recognize` o `/v1/persons` dispara la descarga única de los modelos de InsightFace (~15 MB para `buffalo_s` en `~/.insightface/`). Los arranques siguientes son instantáneos.
 
 Si el puerto 8765 está ocupado:
 ```bash
@@ -113,7 +113,8 @@ Todas las opciones son variables de entorno con prefijo `FARO_`:
 | `FARO_N_CTX`                        | `4096`                                   | Ventana de contexto                    |
 | `FARO_PERSONS_DB_PATH`              | `data/persons.json`                      | Dónde viven las personas enroladas     |
 | `FARO_TOKENS_DB_PATH`               | `data/tokens.json`                       | Dónde viven los tokens de enrolación   |
-| `FARO_FACE_SIMILARITY_THRESHOLD`    | `0.5`                                    | Umbral de similitud coseno             |
+| `FARO_FACE_EMBEDDER`                | `mobilefacenet`                          | `mobilefacenet` (default) o `insightface-buffalo_l` |
+| `FARO_FACE_SIMILARITY_THRESHOLD`    | `0.45`                                   | Umbral de similitud coseno             |
 | `FARO_ADMIN_USERNAME`               | _(vacío)_                                | Usuario para Basic Auth de cuidador    |
 | `FARO_ADMIN_PASSWORD`               | _(vacío)_                                | Contraseña para Basic Auth de cuidador |
 
@@ -225,7 +226,7 @@ Una respuesta exitosa:
     "id": "171c25a5d3ff",
     "name": "Albert Einstein",
     "description": "tu abuelo paterno",
-    "similarity": 0.5965
+    "similarity": 0.5164
   },
   "spoken": "Ese es Albert Einstein, tu abuelo paterno."
 }
@@ -252,21 +253,23 @@ Los embeddings son un resumen de baja dimensión y con pérdida del rostro. Reco
 
 ## Precisión
 
-Medida empírica con tres fotos distintas de Albert Einstein (dominio público) y una de Marie Curie como control negativo:
+Medida empírica con tres fotos distintas de Albert Einstein (dominio público) y una de Marie Curie como control negativo, con el embedder por defecto **MobileFaceNet** (`buffalo_s`):
 
-| Pareja                                                   | Sim. coseno | Veredicto (umbral 0.5) |
-|----------------------------------------------------------|-------------|------------------------|
-| Einstein 1921 (enrolada) vs. Einstein 1920               | **+0.5965** | match                  |
-| Einstein 1921 (enrolada) vs. Einstein 1921 re-crop       | **+0.5602** | match                  |
-| Einstein 1921 (enrolada) vs. Marie Curie                 | **+0.0129** | no match               |
+| Pareja                                                   | Sim. coseno | Veredicto (umbral 0.45) |
+|----------------------------------------------------------|-------------|-------------------------|
+| Einstein 1921 (enrolada) vs. Einstein 1920               | **+0.5164** | match                   |
+| Einstein 1921 (enrolada) vs. Einstein 1921 re-crop       | **+0.5024** | match                   |
+| Einstein 1921 (enrolada) vs. Marie Curie                 | **+0.0577** | no match                |
 
-Para reproducirlo:
+Gap de separación: **+0.4447** entre la mínima sim de misma persona y la máxima sim de persona distinta.
+
+Para reproducirlo (el script corre los dos embedders lado a lado y emite también la tabla para `buffalo_l`):
 ```bash
 .venv/bin/python scripts/fetch_test_data.py   # si aún no las has descargado
 .venv/bin/python scripts/similarity_check.py
 ```
 
-La misma persona en fotos distintas se sitúa cómodamente sobre el umbral de 0.5; una persona distinta se queda cerca de cero. La separación es amplia.
+La misma persona en fotos distintas se sitúa sobre el umbral de 0.45; una persona distinta se queda cerca de cero. La separación es amplia, aunque más justa que con el modelo grande `buffalo_l` (ver [experimento 003](./experiments/003-mobilefacenet-swap/)).
 
 **Casos donde el umbral puede fallar:**
 - Diferencia grande de edad entre la foto de enrolación y la de reconocimiento
@@ -278,6 +281,13 @@ Si los casos límite dan falsos negativos, baja el umbral:
 ```bash
 FARO_FACE_SIMILARITY_THRESHOLD=0.4 .venv/bin/uvicorn app.main:app --port 8765
 ```
+
+Y si necesitas más precisión en el servidor (a costa de footprint y de que ya no podrías reproducir lo mismo en el teléfono), puedes activar `buffalo_l`:
+```bash
+FARO_FACE_EMBEDDER=insightface-buffalo_l .venv/bin/uvicorn app.main:app --port 8765
+```
+
+> **Aviso de incompatibilidad de datos:** los dos embedders producen embeddings en espacios vectoriales distintos. Si cambias `FARO_FACE_EMBEDDER`, las personas enroladas con el embedder anterior **dejan de reconocerse** y hay que re-enrolarlas. El `data/persons.json` no es portable entre embedders.
 
 **Mejora futura de robustez** (no implementada): enrolar varias fotos por persona y promediar los embeddings. Unas 20 líneas en `PersonStore`. Aporta mucha más tolerancia a pose, iluminación y edad sin tener que tocar el umbral.
 
@@ -299,7 +309,7 @@ Mismos protocolos, misma plantilla de prompts, mismas formas de OpenAPI — el p
 .venv/bin/pytest -q
 ```
 
-Ocho tests cubren el contrato del proveedor de LLM, la plantilla de chat y la superficie HTTP usando `MockProvider`. El camino de reconocimiento facial se ejercita a mano con `scripts/similarity_check.py` — automatizarlo bajo pytest requeriría cargar los ~325 MB de modelos de InsightFace en cada sesión, cosa que aún no hemos hecho.
+La suite cubre el contrato del proveedor de LLM, la plantilla de chat, los flujos de personas/tokens, la auth y la superficie HTTP usando `MockProvider` y `MockEmbedder` (determinístico por hash de bytes). El camino de reconocimiento facial real se ejercita a mano con `scripts/similarity_check.py` — el comparador A/B entre `mobilefacenet` y `buffalo_l` que dejó el [experimento 003](./experiments/003-mobilefacenet-swap/).
 
 ## Limitaciones conocidas
 

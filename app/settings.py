@@ -18,7 +18,10 @@ class Settings(BaseSettings):
 
     persons_db_path: str = "data/persons.json"
     tokens_db_path: str = "data/tokens.json"
-    face_similarity_threshold: float = 0.5
+    # Lowered from 0.5 to 0.45 in experiment 003: MobileFaceNet's
+    # same-person similarities sit ~0.5 (vs ~0.6 for buffalo_l), so we
+    # need a touch more headroom for real-world variation.
+    face_similarity_threshold: float = 0.45
 
     # Which face embedder runs server-side. Both are insightface packs;
     # `mobilefacenet` (buffalo_s) is the default because it is the only

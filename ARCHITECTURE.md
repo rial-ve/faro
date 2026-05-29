@@ -58,17 +58,19 @@ These are deliberately out of scope for the MVP. They share the engine, so addin
 
 ## 3. Model targets
 
-| Stage              | Component       | Model                       | Quantization | Runtime                |
-|--------------------|------------------|-----------------------------|--------------|------------------------|
-| Phone target       | Language model  | Llama 3.2 1B Instruct       | 4-bit (Q4)   | ExecuTorch             |
-| Phone target       | Face embedder   | ArcFace (buffalo_l ResNet-50) | fp16        | ONNX Runtime Mobile    |
-| Quality fallback   | Language model  | Llama 3.2 3B Instruct       | 4-bit (Q4)   | ExecuTorch             |
-| Backend harness    | Language model  | Llama 3.2 1B Instruct       | Q4_K_M GGUF  | llama-cpp-python       |
-| Backend harness    | Face embedder   | ArcFace (buffalo_l)         | fp16         | ONNX Runtime (CPU)     |
+| Stage              | Component       | Model                                | Footprint  | Runtime                |
+|--------------------|------------------|--------------------------------------|------------|------------------------|
+| Phone target       | Language model  | Llama 3.2 1B Instruct (Q4)           | ~770 MB    | ExecuTorch             |
+| Phone target       | Face embedder   | MobileFaceNet (buffalo_s `w600k_mbf`) | 13 MB     | ONNX Runtime Mobile / TFLite |
+| Quality fallback   | Language model  | Llama 3.2 3B Instruct (Q4)           | ~1.9 GB    | ExecuTorch             |
+| Backend harness    | Language model  | Llama 3.2 1B Instruct (Q4_K_M GGUF)  | 770 MB     | llama-cpp-python       |
+| Backend harness    | Face embedder   | MobileFaceNet (default) or buffalo_l (A/B) | 13 MB / 166 MB | ONNX Runtime (CPU) |
 
 We start at **1B Q4** on the LLM side because the gap to "feels instant" is small, the 1B weights fit comfortably in mobile memory and disk budgets, and the export → quantize → deploy pipeline is identical to the 3B path. If 1B fails the eval bar we move to 3B and accept the battery / memory cost.
 
-On the face side we run **buffalo_l** in the harness (large model, 512-d embedding, strong accuracy). For the phone target we will likely swap to a quantized MobileFaceNet or similar — same ONNX/ArcFace family, smaller footprint. The harness's job is to set the accuracy ceiling, not to mirror the phone's compute budget exactly.
+On the face side we run **MobileFaceNet** (`buffalo_s/w600k_mbf.onnx`, 13 MB, 512-d embedding) as the default. The decision came out of [experiment 003](../experiments/003-mobilefacenet-swap/): MobileFaceNet preserves the same-vs-different-person separation we need while staying mobile-deployable. `buffalo_l` (166 MB, ResNet-50) stays selectable via `FARO_FACE_EMBEDDER=insightface-buffalo_l` for benchmarking, but the prod path is MobileFaceNet on both server and phone — same model on both sides is a hard requirement for the embeddings to be comparable.
+
+**Data caveat from the swap:** embeddings from `buffalo_l` and `mobilefacenet` live in independent vector spaces despite having the same 512-d shape. Switching `FARO_FACE_EMBEDDER` makes any previously-enrolled `data/persons.json` un-matchable; people must be re-enrolled.
 
 ## 4. Two on-device abstractions
 
@@ -102,8 +104,9 @@ class FaceEmbedder(Protocol):
 
 Implementations:
 
-- **`InsightFaceEmbedder`** (this repo, Python) — wraps `insightface` `buffalo_l` running on ONNX Runtime CPU. Returns the largest detected face's 512-d ArcFace embedding.
-- Future on-device implementation in Kotlin/Swift over ONNX Runtime Mobile loads the same family of ArcFace ONNX models, returns the same shape.
+- **`MobileFaceNetEmbedder`** (this repo, Python — default) — wraps `insightface` `buffalo_s` running on ONNX Runtime CPU. Returns the largest detected face's 512-d embedding. Selected by [experiment 003](../experiments/003-mobilefacenet-swap/) as the model that runs on both server and phone.
+- **`InsightFaceEmbedder`** (this repo, Python) — same Protocol, wraps `insightface` `buffalo_l` (ResNet-50, 166 MB). Kept as a server-only alternative for benchmarking; selectable via `FARO_FACE_EMBEDDER=insightface-buffalo_l`.
+- Future on-device implementation in Kotlin/Swift over ONNX Runtime Mobile (or TFLite, post-conversion) loads the same `w600k_mbf.onnx` we already use here.
 
 The provider abstractions are **the** architectural contract. Anything that needs to vary between server and device is hidden behind them; anything that should stay the same (prompts, thresholds, schemas) sits above them.
 
