@@ -1,0 +1,41 @@
+name: faro
+description: "Faro — memory assistant for people with Alzheimer's. Recognizes loved ones on-device and says who they are aloud."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Backend wiring (004.4)
+  flutter_secure_storage: ^9.2.2
+  dio: ^5.7.0
+
+  # Camera + image handling (004.5)
+  image_picker: ^1.1.2
+  image: ^4.3.0
+
+  # Face detection (004.6)
+  google_mlkit_face_detection: ^0.13.1
+
+  # On-device embedding (004.7)
+  tflite_flutter: ^0.11.0
+
+  # Text to speech (004.9)
+  flutter_tts: ^4.2.0
+
+  # Routing
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/models/

@@ -19,8 +19,14 @@ El experimento 003 dejó al servidor corriendo el mismo MobileFaceNet que correr
 
 _Se irá rellenando a medida que el experimento avance._
 
+### 004.3 — Decisión: monorepo
+
+**Monorepo**, app Flutter en `app-flutter/` dentro de `faro`. Decidido por fiat sin commit propio. Tradeoff considerado: monorepo facilita commits coordinados backend ↔ app durante el desarrollo intenso de 004.4–004.8; el riesgo de arrastrar el toolchain de Flutter al CI del backend Python se mitiga con `paths-ignore` en GitHub Actions cuando exista CI.
+
 ### Cerrados
 
 | Punto | Entregable                                                                  | Commit    |
 |-------|-----------------------------------------------------------------------------|-----------|
-| 004.1 | Test Card publicada + scaffolding del experimento                           | _este commit_ |
+| 004.1 | Test Card publicada + scaffolding del experimento                           | `b3e9fb7` |
+| 004.2 | Endpoint `POST /v1/recognize-embedding` + 6 tests con `MockEmbedder` pattern | `813c6d3` |
+| 004.4 | Flutter scaffold en `app-flutter/`, credenciales en secure storage, probe `/healthz` + `/v1/models` | _este commit_ |
