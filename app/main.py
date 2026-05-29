@@ -10,7 +10,7 @@ from app.api.enroll import public_router as enroll_public_router
 from app.api.persons import router as persons_router
 from app.api.recognize import router as recognize_router
 from app.enrollment.tokens import TokenStore
-from app.perception.face import InsightFaceEmbedder
+from app.perception.face import FaceEmbedder, InsightFaceEmbedder, MobileFaceNetEmbedder
 from app.persons.store import PersonStore
 from app.providers.base import LLMProvider
 from app.providers.meta_llama_mobile import MetaLlamaMobileProvider
@@ -30,12 +30,18 @@ def build_provider(settings: Settings) -> LLMProvider:
     )
 
 
+def build_face_embedder(settings: Settings) -> FaceEmbedder:
+    if settings.face_embedder == "mobilefacenet":
+        return MobileFaceNetEmbedder()
+    return InsightFaceEmbedder()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = load()
     app.state.settings = settings
     app.state.provider = build_provider(settings)
-    app.state.face_embedder = InsightFaceEmbedder()
+    app.state.face_embedder = build_face_embedder(settings)
     app.state.person_store = PersonStore(settings.persons_db_path)
     app.state.token_store = TokenStore(settings.tokens_db_path)
     yield

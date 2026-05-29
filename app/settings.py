@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     tokens_db_path: str = "data/tokens.json"
     face_similarity_threshold: float = 0.5
 
+    # Which face embedder runs server-side. Both are insightface packs;
+    # the smaller `mobilefacenet` (buffalo_s) is the on-device target.
+    # During experiment 003 we A/B between the two; the default flips to
+    # `mobilefacenet` only when the comparison passes the success criteria.
+    face_embedder: Literal["insightface-buffalo_l", "mobilefacenet"] = "insightface-buffalo_l"
+
     # Basic Auth credentials for the carer-side API.
     # Must both be set; if either is empty, admin routes return 503.
     admin_username: str = ""
