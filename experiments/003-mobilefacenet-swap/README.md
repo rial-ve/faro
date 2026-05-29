@@ -1,8 +1,8 @@
 # Experimento 003 — Migración del face embedder a MobileFaceNet
 
-**Estado:** 🟡 en curso
-**Periodo:** 2026-05-29 → _en progreso_
-**Bloqueante para:** experimento 004 (app Flutter con embedding on-device)
+**Estado:** ✅ Validado
+**Periodo:** 2026-05-29
+**Desbloquea:** experimento 004 (app Flutter con embedding on-device)
 
 ## Resumen
 
@@ -13,7 +13,7 @@ El experimento mantiene `InsightFaceEmbedder` viva en paralelo durante toda la f
 ## Cartas
 
 - [Test Card](./test-card.md) — la hipótesis y el plan (escrita antes de implementar)
-- Learning Card — _pendiente_
+- [Learning Card](./learning-card.md) — observaciones, decisión, siguientes pasos
 
 ## Evidencia
 
@@ -36,9 +36,13 @@ _Se irá rellenando a medida que el experimento avance:_
 
 Razón de elegir esta variante sobre otras MobileFaceNet del ecosistema: mismo autor, mismo dataset y misma API de carga que `buffalo_l`, lo que hace la comparación A/B una variable única (arquitectura) en vez de varias confundidas.
 
-### Pendientes
+### Cerrados
 
-- Código de `MobileFaceNetEmbedder`: _pendiente (003.3)_
-- Setting `FARO_FACE_EMBEDDER`: _pendiente (003.4)_
-- Datos comparativos de precisión: _pendiente (003.5)_
-- Decisión final + commit: _pendiente (003.6–003.7)_
+| Punto | Entregable                                                                  | Commit    |
+|-------|-----------------------------------------------------------------------------|-----------|
+| 003.3 | `MobileFaceNetEmbedder` implementado en `app/perception/face.py`            | `115cc85` |
+| 003.4 | Setting `FARO_FACE_EMBEDDER` + `build_face_embedder()` + tests              | `9120c06` |
+| 003.4b| Default flipeado a `mobilefacenet`                                          | `cafbfe2` |
+| 003.5 | Script comparativo A/B con datos validando los criterios                    | `46d7ff4` |
+| 003.6 | Threshold default 0.5 → 0.45 + README + ARCHITECTURE actualizados           | `b14c56d` |
+| 003.7 | Learning Card cerrada                                                       | _esta carta_ |
