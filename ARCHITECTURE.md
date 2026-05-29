@@ -140,6 +140,7 @@ Minimal. Only what we need to iterate the prompts and the perception pipeline. R
 | DELETE | `/v1/persons/{id}`                | Remove or reject a person                            |
 | POST   | `/v1/persons/{id}/approve`        | Promote a pending person to `active`                 |
 | POST   | `/v1/recognize`                   | Image → match + LLM-phrased spoken response          |
+| POST   | `/v1/recognize-embedding`         | Pre-computed 512-d embedding (on-device path) → match + spoken response |
 | POST   | `/v1/enrollment-tokens`           | Create a shareable enrolment token                   |
 | GET    | `/v1/enrollment-tokens`           | List active tokens                                   |
 | DELETE | `/v1/enrollment-tokens/{id}`      | Revoke a token                                       |

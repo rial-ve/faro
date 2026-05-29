@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Literal
 
+import numpy as np
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from app.perception.face import FaceEmbedder
+from app.perception.face import EMBEDDING_DIM, FaceEmbedder
 from app.persons.store import Match, PersonStore
 from app.providers.base import ChatMessage, LLMProvider
 
@@ -140,4 +141,35 @@ async def recognize(
         return RecognizeResponse(match=None, spoken=UNKNOWN_RESPONSE[language])
 
     spoken = await _phrase(provider, match, language)
+    return RecognizeResponse(match=_to_public(match), spoken=spoken)
+
+
+class RecognizeEmbeddingRequest(BaseModel):
+    # The on-device client (experiment 004 Flutter app) runs the same
+    # MobileFaceNet model that the server runs, so the two produce
+    # embeddings in the same vector space. The phone sends the 512-d
+    # vector; the image bytes never leave the device.
+    embedding: list[float] = Field(
+        ..., min_length=EMBEDDING_DIM, max_length=EMBEDDING_DIM
+    )
+    language: Language = "es"
+
+
+@router.post("/recognize-embedding", response_model=RecognizeResponse)
+async def recognize_embedding(
+    request: Request,
+    body: RecognizeEmbeddingRequest,
+) -> RecognizeResponse:
+    store: PersonStore = request.app.state.person_store
+    provider: LLMProvider = request.app.state.provider
+    threshold: float = request.app.state.settings.face_similarity_threshold
+
+    embedding = np.asarray(body.embedding, dtype=np.float32)
+    match = store.find_closest(embedding, threshold=threshold)
+    if match is None:
+        return RecognizeResponse(
+            match=None, spoken=UNKNOWN_RESPONSE[body.language]
+        )
+
+    spoken = await _phrase(provider, match, body.language)
     return RecognizeResponse(match=_to_public(match), spoken=spoken)
